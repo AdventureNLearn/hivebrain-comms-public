@@ -55,6 +55,18 @@ class ChildEnvTests(unittest.TestCase):
             "USERPROFILE": "profile",
             "LOCALAPPDATA": "local",
             "APPDATA": "roam",
+            "PATHEXT": ".COM;.EXE",
+            "SYSTEMDRIVE": "C:",
+            "PROGRAMFILES": "C:\\Program Files",
+            "PROGRAMFILES(X86)": "C:\\Program Files (x86)",
+            "PROGRAMDATA": "C:\\ProgramData",
+            "HOMEDRIVE": "C:",
+            "HOMEPATH": "\\Users\\tester",
+            "USERNAME": "tester",
+            "COMPUTERNAME": "box",
+            "PROCESSOR_ARCHITECTURE": "AMD64",
+            "NUMBER_OF_PROCESSORS": "4",
+            "PSModulePath": "modules",
             "GROK_API_KEY": "should-not-pass",
             "XAI_API_KEY": "should-not-pass",
             "OPENAI_API_KEY": "should-not-pass",
@@ -65,6 +77,10 @@ class ChildEnvTests(unittest.TestCase):
         self.assertEqual(out["GROK_HOME"], "home")
         self.assertEqual(out["PATH"], "bin")
         self.assertEqual(out["SYSTEMROOT"], "C:\\Windows")
+        self.assertEqual(out["PATHEXT"], ".COM;.EXE")
+        self.assertEqual(out["PROGRAMFILES(X86)"], "C:\\Program Files (x86)")
+        self.assertEqual(out["USERNAME"], "tester")
+        self.assertEqual(out["PSModulePath"], "modules")
         self.assertNotIn("GROK_API_KEY", out)
         self.assertNotIn("XAI_API_KEY", out)
         self.assertNotIn("OPENAI_API_KEY", out)
@@ -91,6 +107,8 @@ class ChildEnvTests(unittest.TestCase):
         fn = load_server_fn("auth_env_enabled", "child_env_allowlist")["child_env_allowlist"]
         out = fn({"PATH": "parent", "SECRET": "nope"}, {"PATH": "child", "GROK_HOME": "pane"})
         self.assertEqual(out, {"PATH": "child", "GROK_HOME": "pane"})
+        self.assertNotIn("USERNAME", out)
+        self.assertNotIn("PSModulePath", out)
 
 
 class SourceGuardTests(unittest.TestCase):
@@ -119,6 +137,12 @@ class SourceGuardTests(unittest.TestCase):
         self.assertNotIn("os.environ.copy()", server)
         self.assertIn("child_env_allowlist", server)
         self.assertIn("HBC_PASS_GROK_AUTH", server)
+        for name in (
+            "PATHEXT", "SYSTEMDRIVE", "PROGRAMFILES", "PROGRAMFILES(X86)",
+            "PROGRAMDATA", "HOMEDRIVE", "HOMEPATH", "USERNAME", "COMPUTERNAME",
+            "PROCESSOR_ARCHITECTURE", "NUMBER_OF_PROCESSORS", "PSModulePath",
+        ):
+            self.assertIn('"' + name + '"', server, name)
 
     def test_grok_starts_only_on_request(self):
         server = (ROOT / "server.py").read_text(encoding="utf-8")
@@ -142,13 +166,16 @@ class SourceGuardTests(unittest.TestCase):
         self.assertNotIn("SPOOFED-WARN", text)
         self.assertNotIn("$warn", text)
         self.assertIn("exit 3", text)
+        self.assertIn('Write-Output "signing key is missing"; exit 3', text)
+        self.assertNotIn("throw \"signing key is missing\"", text)
         self.assertNotRegex(text, r"exit\s+\$\(if")
 
     def test_readme_risks_and_no_overclaim(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8-sig")
         self.assertTrue(text.startswith("# HiveBrainComms\n\n## Risks / read first\n"))
         self.assertIn("off by default", text)
-        self.assertIn("always exits 3", text)
+        self.assertIn("exits 3 on a bad or missing signature", text)
+        self.assertIn("signing key file is missing", text)
         self.assertIn("-ExecutionPolicy Bypass", text)
         self.assertIn("default answer is **No**", text)
         self.assertIn("env allowlist", text)

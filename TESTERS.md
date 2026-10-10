@@ -24,7 +24,9 @@ The .NET 8 SDK is required because the app runs through the `dotnet` host. Start
 
 The Build tab does not watch the bus unless you opt in. Set `HBC_BUILD_WATCH=1` in the environment, restart the hub, then confirm **Start grok** on the first session. The watcher then polls the project's `bus/` folder (`LEAD-TO-BUILD.md` and `GROKBOT-TO-BUILD.md`) from the project root. Leave the variable unset for a plain shell. The routing view in the app also reads that same `bus/` folder, not a home-directory handoff path.
 
-Child shells do not inherit the parent environment. They get `GROK_HOME`, `PATH`, and the usual Windows path variables when present. API keys are not passed. If grok needs `GROK_API_KEY` or `XAI_API_KEY`, set `HBC_PASS_GROK_AUTH=1` before you start the hub. That opt-in is off by default.
+Child shells do not inherit the parent environment. They get `GROK_HOME`, `PATH`, and the usual Windows path, drive, and identity variables when present (the full list is in the README Risks section). API keys are not passed. If grok needs `GROK_API_KEY` or `XAI_API_KEY`, set `HBC_PASS_GROK_AUTH=1` before you start the hub. That opt-in is off by default.
+
+`tools/Sign-BusJob.ps1` exits 3 if the signature is bad or missing, and also if the signing key file is missing.
 
 ## Sign-in
 

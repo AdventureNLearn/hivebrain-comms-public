@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 $fields = @("id", "from", "to", "lane", "priority", "time", "routed", "job", "done-when")
 $keyName = @{ GrokBot = "bus-grokbot.bin"; Lead = "bus-lead.bin" }[$Owner]
 $keyPath = Join-Path $env:USERPROFILE ".grok\keys\$keyName"
-if (-not (Test-Path $keyPath)) { throw "signing key is missing" }
+if (-not (Test-Path $keyPath)) { Write-Output "signing key is missing"; exit 3 }
 
 function Get-Secret {
     Add-Type -AssemblyName System.Security
