@@ -5,7 +5,9 @@
 - The Build tab is a full shell. **+ Build session** and the first session open a plain command shell. Starting grok takes a separate **Start grok** click, then a confirm that says it will run an agent with your user permissions. The default answer is **No**.
 - Auto-watch is **off by default**. If you set `HBC_BUILD_WATCH=1` and then confirm **Start grok** on the first session, that session watches the project's `bus/` folder (not `~/.grok/handoff`). The working directory defaults to the project root so `bus/` is visible.
 - Child processes get a short env allowlist only: `GROK_HOME`, `PATH`, and on Windows `SYSTEMROOT`, `WINDIR`, `COMSPEC`, `TEMP`, `TMP`, `USERPROFILE`, `LOCALAPPDATA`, `APPDATA`, `PATHEXT`, `SYSTEMDRIVE`, `PROGRAMFILES`, `PROGRAMFILES(X86)`, `PROGRAMDATA`, `HOMEDRIVE`, `HOMEPATH`, `USERNAME`, `COMPUTERNAME`, `PROCESSOR_ARCHITECTURE`, `NUMBER_OF_PROCESSORS`, and `PSModulePath` when present. API keys are not forwarded. If grok needs `GROK_API_KEY` or `XAI_API_KEY`, set `HBC_PASS_GROK_AUTH=1` before starting the hub; that opt-in is required and is off by default.
+- The hub session token is stored in plain text in `.session-token` and in the `build.html` URL. Any program running as the same Windows user can read it, type into the shells, or start grok without the confirm dialog. Run it only on an account you trust, or in a VM.
 - `tools/Sign-BusJob.ps1` always exits 3 on a bad or missing signature, and also exits 3 if the signing key file is missing. The hub and the Build tab do not enforce signatures on their own in this version, so only use this in a VM or a throwaway test account.
+- Failed signature checks are logged to `%TEMP%\bus-sig.log`.
 - The launchers run PowerShell with `-ExecutionPolicy Bypass`.
 
 **One window to run your AI team.**
