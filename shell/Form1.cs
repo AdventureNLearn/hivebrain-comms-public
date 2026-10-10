@@ -205,7 +205,7 @@ public partial class Form1 : Form
             else
             {
                 SelectTab(IndexOf("Build"));
-                Say("Build tab is selected. Sign in there if the resume prompt is waiting.");
+                Say("Build tab is selected. Sessions are a plain shell until you start grok.");
             }
             FocusOrStartBot();
             Program.Log("start all");
@@ -251,49 +251,6 @@ public partial class Form1 : Form
             SetForegroundWindow(proc.MainWindowHandle);
             return;
         }
-    }
-
-    private static void FocusOrStartBuild(string root)
-    {
-        foreach (var proc in System.Diagnostics.Process.GetProcessesByName("WindowsTerminal"))
-        {
-            try
-            {
-                var command = CommandLineOf(proc.Id);
-                if (!command.Contains("--title \"Grok Build\"", StringComparison.Ordinal)) continue;
-                if (proc.MainWindowHandle == IntPtr.Zero) continue;
-                ShowWindow(proc.MainWindowHandle, 9);
-                SetForegroundWindow(proc.MainWindowHandle);
-                return;
-            }
-            catch (Exception ex)
-            {
-                Program.Log("build focus " + ex.Message);
-            }
-        }
-        var link = FindBuildLink(root);
-        if (link is not null)
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(link) { UseShellExecute = true });
-        else
-            Program.Log("Grok Build shortcut was not found beside the app or on the Desktop.");
-    }
-
-    private static string? FindBuildLink(string root)
-    {
-        var local = Path.Combine(root, "Grok Build.lnk");
-        if (File.Exists(local)) return local;
-        var desks = new[]
-        {
-            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "OneDrive", "Desktop"),
-        };
-        foreach (var desk in desks)
-        {
-            if (string.IsNullOrEmpty(desk)) continue;
-            var link = Path.Combine(desk, "Grok Build.lnk");
-            if (File.Exists(link)) return link;
-        }
-        return null;
     }
 
     private static string CommandLineOf(int pid)
@@ -572,7 +529,7 @@ public partial class Form1 : Form
         var page = new Panel { Dock = DockStyle.Fill, BackColor = Paper, Visible = false };
         var banner = new Label
         {
-            Text = "Build is not watching yet. This tab starts when you select it.",
+            Text = "Build sessions are a plain shell. Start grok asks first; the default answer is No.",
             Dock = DockStyle.Top,
             Height = 24,
             ForeColor = Ink,
@@ -595,7 +552,9 @@ public partial class Form1 : Form
             view.Source = new Uri("http://127.0.0.1:8107/build.html?token=" + Uri.EscapeDataString(token));
             view.CoreWebView2.NavigationCompleted += (_, e) =>
             {
-                banner.Text = e.IsSuccess ? "Build tab is connected." : "Build tab failed to load. The hub may be down.";
+                banner.Text = e.IsSuccess
+                    ? "Build tab is connected. Sessions stay a plain shell until you start grok."
+                    : "Build tab failed to load. The hub may be down.";
                 if (!e.IsSuccess) Say("Build tab failed to load.");
             };
         }
@@ -625,9 +584,9 @@ public partial class Form1 : Form
         page.BringToFront();
         void RefreshRoute()
         {
-            var handoff = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".grok", "handoff");
-            var inbound = Path.Combine(handoff, "GROKBOT-TO-BUILD.md");
-            var returns = Path.Combine(handoff, "BUILD-TO-GROKBOT.md");
+            var busDir = Path.Combine(root, "bus");
+            var inbound = Path.Combine(busDir, "GROKBOT-TO-BUILD.md");
+            var returns = Path.Combine(busDir, "BUILD-TO-GROKBOT.md");
             view.Text = TailOf(inbound, "routed:") + Environment.NewLine + "---- returns ----" + Environment.NewLine + TailOf(returns, "## ");
         }
         RefreshRoute();

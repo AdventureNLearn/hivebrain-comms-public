@@ -14,8 +14,15 @@
   .pane { position: relative; background: #0f1115; min-width: 0; min-height: 0; }
   .pane .head { height: 22px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; background: #151820; color: #8a93a6; font-size: 12px; }
   .pane .head.watch { color: #3ddc84; }
-  .pane .head button { background: none; border: 0; color: #8a93a6; cursor: pointer; font-size: 14px; }
+  .pane .head button { background: none; border: 0; color: #8a93a6; cursor: pointer; font-size: 12px; }
+  .pane .head .actions { display: inline-flex; gap: 8px; align-items: center; }
   .pane .term { position: absolute; top: 22px; left: 4px; right: 0; bottom: 0; }
+  .ask { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 20; }
+  .ask-box { background: #171a21; color: #cfd6e4; padding: 16px; width: 360px; border: 1px solid #2c313c; }
+  .ask-box p { margin: 0 0 12px; }
+  .ask-row { display: flex; gap: 8px; justify-content: flex-end; }
+  .ask-row button { background: #22262f; color: #cfd6e4; border: 0; padding: 6px 14px; cursor: pointer; }
+  .ask-no { outline: 1px solid #3ddc84; }
 </style>
 </head>
 <body>
@@ -38,7 +45,7 @@ function applyLayout() {
   grid.style.gridTemplateColumns = `repeat(${c}, 1fr)`;
   grid.style.gridTemplateRows = `repeat(${r}, 1fr)`;
   const fs = panes.length <= 1 ? 14 : panes.length <= 4 ? 13 : 12;
-  note.textContent = `${panes.length} of ${MAX} sessions` + (panes.length === 1 ? " (bus watcher)" : "");
+  note.textContent = `${panes.length} of ${MAX} sessions`;
   panes.forEach(p => {
     if (p.term.options.fontSize !== fs) p.term.options.fontSize = fs;
     fit(p);
@@ -59,22 +66,71 @@ function freeId() {
   for (let i = 2; i <= MAX; i++) if (!panes.some(p => p.id === "build" + i)) return "build" + i;
   return null;
 }
+function askStartGrok() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "ask";
+    const box = document.createElement("div");
+    box.className = "ask-box";
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-modal", "true");
+    const text = document.createElement("p");
+    text.textContent = "This will run an agent with your user permissions.";
+    const row = document.createElement("div");
+    row.className = "ask-row";
+    const no = document.createElement("button");
+    no.type = "button";
+    no.className = "ask-no";
+    no.textContent = "No";
+    const yes = document.createElement("button");
+    yes.type = "button";
+    yes.className = "ask-yes";
+    yes.textContent = "Yes";
+    row.append(no, yes);
+    box.append(text, row);
+    overlay.appendChild(box);
+    const done = (ok) => { overlay.remove(); resolve(ok); };
+    no.onclick = () => done(false);
+    yes.onclick = () => done(true);
+    overlay.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" || event.key === "Enter") {
+        event.preventDefault();
+        done(false);
+      }
+    });
+    document.body.appendChild(overlay);
+    no.focus();
+  });
+}
+function startGrok(p) {
+  askStartGrok().then((ok) => {
+    if (!ok) { note.textContent = "Grok was not started."; return; }
+    if (!p.socket || p.socket.readyState !== 1) { note.textContent = "The session is not connected."; return; }
+    p.socket.send("\u0000start-grok");
+    note.textContent = "Start grok sent for " + p.id + ".";
+  });
+}
 function addPane() {
   if (panes.length >= MAX) { note.textContent = "Max 8 Build sessions."; return; }
   const id = freeId();
   console.log("pane open " + id);
-  note.textContent = "Opened " + id + ".";
+  note.textContent = "Opened " + id + " as a plain shell.";
   const el = document.createElement("div"); el.className = "pane";
-  const head = document.createElement("div"); head.className = "head" + (id === "build" ? " watch" : "");
-  head.innerHTML = `<span>${id === "build" ? "Build (bus watcher)" : "Build " + id.slice(5)}</span>`;
-  const close = document.createElement("button"); close.textContent = "×"; close.title = "Close this pane (the watcher session keeps running)";
-  head.appendChild(close);
+  const head = document.createElement("div"); head.className = "head";
+  const title = document.createElement("span");
+  title.textContent = id === "build" ? "Build" : "Build " + id.slice(5);
+  const actions = document.createElement("span"); actions.className = "actions";
+  const start = document.createElement("button"); start.type = "button"; start.textContent = "Start grok"; start.title = "Asks first. Default answer is No.";
+  const close = document.createElement("button"); close.type = "button"; close.textContent = "×"; close.title = "Close this pane";
+  actions.append(start, close);
+  head.append(title, actions);
   const box = document.createElement("div"); box.className = "term";
   el.append(head, box); grid.appendChild(el);
   const term = new Terminal({ cursorBlink: true, fontSize: 14, theme: { background: "#0f1115" } });
   const fitAddon = new FitAddon.FitAddon(); term.loadAddon(fitAddon); term.open(box);
   const p = { id, el, term, fit: fitAddon, socket: null };
   panes.push(p);
+  start.onclick = () => startGrok(p);
   close.onclick = () => { if (p.socket) p.socket.close(); term.dispose(); el.remove(); panes.splice(panes.indexOf(p), 1); relayout(); };
   if (!token) { term.writeln("Hub token is missing. The terminal stays closed."); relayout(); return; }
   const s = new WebSocket("ws://127.0.0.1:8107/term/" + id + "?token=" + encodeURIComponent(token));
