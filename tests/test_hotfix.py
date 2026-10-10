@@ -58,7 +58,7 @@ class SourceGuardTests(unittest.TestCase):
         self.assertNotRegex(text, r"exit\s+\$\(if")
 
     def test_readme_risks_and_no_overclaim(self):
-        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        text = (ROOT / "README.md").read_text(encoding="utf-8-sig")
         self.assertTrue(text.startswith("# HiveBrainComms\n\n## Risks / read first\n"))
         self.assertIn("off by default", text)
         self.assertIn("always exits 3", text)

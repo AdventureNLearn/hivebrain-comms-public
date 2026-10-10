@@ -1,4 +1,4 @@
-﻿# HiveBrainComms
+# HiveBrainComms
 
 ## Risks / read first
 
