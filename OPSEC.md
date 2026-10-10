@@ -1,0 +1,9 @@
+# OPSEC — HiveBrainComms
+
+- Class: pattern-lab. One tree: this folder.
+- Loopback only: 127.0.0.1:8107. Never bind 0.0.0.0.
+- The bus inside `bus/` is fiction. The live handoff folder is never read or written.
+- No credentials. Sign-in is the person's step.
+- No voice recording. No send, post, pay, delete, git, or publish from a job.
+- Freebots and HiveBrain game chat are off. No feed, no watcher, no pane, unless the person asks in a later YES.
+- License of this project: TBD. The person decides.

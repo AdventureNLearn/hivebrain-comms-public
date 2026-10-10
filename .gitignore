@@ -1,0 +1,22 @@
+__pycache__/
+*.log
+approvals.jsonl
+.sessions.json
+panes/
+.session-token
+window-state.txt
+shell-settings.txt
+profiles/
+shell/bin/
+shell/obj/
+shell/staging/
+bus/
+.seen-ids.txt
+*.png
+*.csproj.user
+keys/
+Grok Build.lnk
+
+*.pem
+*.key
+.env
