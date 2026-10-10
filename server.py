@@ -21,11 +21,17 @@ LOG = ROOT / "approvals.jsonl"
 SEEN = ROOT / ".seen-ids.txt"
 GROK = Path.home() / ".grok" / "bin" / "grok.exe"
 
-BUILD_CWD = os.environ.get("HBC_BUILD_CWD", str(Path(ROOT.anchor) / "AOS"))
+BUILD_CWD = os.environ.get("HBC_BUILD_CWD", str(ROOT))
 OWNERS = {"LEAD-TO-BUILD.md": "Lead", "GROKBOT-TO-BUILD.md": "Grok Bot"}
 RETURNS = {"Lead": "BUILD-TO-LEAD.md", "Grok Bot": "BUILD-TO-GROKBOT.md"}
 FIELDS = ("id", "from", "to", "lane", "priority", "job", "done-when")
 BAD = re.compile(r"send|post|pay|delete|git push|publish", re.I)
+CHILD_ENV_BASE = ("GROK_HOME", "PATH")
+CHILD_ENV_WINDOWS = (
+    "SYSTEMROOT", "WINDIR", "COMSPEC", "TEMP", "TMP",
+    "USERPROFILE", "LOCALAPPDATA", "APPDATA",
+)
+CHILD_ENV_AUTH = ("GROK_API_KEY", "XAI_API_KEY")
 
 
 def now():
@@ -114,11 +120,35 @@ def append_return(owner, text):
     path.write_text(path.read_text(encoding="utf-8") + "\n" + text + "\n", encoding="utf-8")
 
 
+def auth_env_enabled(env=None):
+    """Forward grok auth vars only when HBC_PASS_GROK_AUTH is an explicit opt-in."""
+    source = os.environ if env is None else env
+    return source.get("HBC_PASS_GROK_AUTH", "").strip().lower() in ("1", "on", "true", "yes")
+
+
+def child_env_allowlist(source, extra=None):
+    """Copy only the named child-process variables. Nothing else."""
+    extra = extra or {}
+    names = list(CHILD_ENV_BASE) + list(CHILD_ENV_WINDOWS)
+    if auth_env_enabled(source):
+        names.extend(CHILD_ENV_AUTH)
+    out = {}
+    for name in names:
+        if name in extra:
+            value = extra[name]
+        else:
+            value = source.get(name)
+        if value:
+            out[name] = value
+    return out
+
+
 def run_pane(pane, command):
     home = ROOT / "panes" / f"pane-{pane}"
     home.mkdir(parents=True, exist_ok=True)
     if not GROK.is_file():
         return 127, "", "grok.exe not found"
+    extra = {"GROK_HOME": str(home), "PATH": str(GROK.parent)}
     completed = subprocess.run(
         [str(GROK), "-p", command, "--permission-mode", "plan", "--max-turns", "1",
          "--cwd", str(home), "--disable-web-search"],
@@ -126,7 +156,7 @@ def run_pane(pane, command):
         capture_output=True,
         text=True,
         timeout=120,
-        env={"GROK_HOME": str(home), "PATH": str(GROK.parent)},
+        env=child_env_allowlist(os.environ, extra),
     )
     return completed.returncode, completed.stdout[-2000:], completed.stderr[-1000:]
 
@@ -169,6 +199,19 @@ def build_watch_enabled(env=None):
     return source.get("HBC_BUILD_WATCH", "").strip().lower() in ("1", "on", "true", "yes")
 
 
+def write_build_grok(pty, pane):
+    """Start grok only after an explicit client request. Watch stays opt-in."""
+    if pane == "build" and build_watch_enabled():
+        prompt = (
+            "Resume the lab-bus watch. Poll the project's bus folder every 5 seconds. "
+            "Watch LEAD-TO-BUILD.md and GROKBOT-TO-BUILD.md. "
+            "Reply only in the sender return file."
+        )
+        pty.write("grok --continue \"" + prompt + "\"\r\n")
+        return
+    pty.write("grok\r\n")
+
+
 def allowed(request):
     origin = request.headers.get("Origin", "")
     if origin and origin != f"http://{HOST}:{PORT}":
@@ -192,24 +235,13 @@ async def term_socket(request):
         home = ROOT / "panes" / f"pane-{pane}"
         home.mkdir(parents=True, exist_ok=True)
         pty = winpty.PTY(120, 32)
-        child_env = os.environ.copy()
         is_build = pane.startswith("build")
+        extra = {"PATH": str(GROK.parent) + os.pathsep + os.environ.get("PATH", "")}
         if not is_build:
-            child_env["GROK_HOME"] = str(home)
-        child_env["PATH"] = str(GROK.parent) + os.pathsep + child_env.get("PATH", "")
-        child_env["PROMPT"] = f"pane{pane}$G"
+            extra["GROK_HOME"] = str(home)
+        child_env = child_env_allowlist(os.environ, extra)
         env_block = "\0".join(f"{key}={value}" for key, value in child_env.items()) + "\0\0"
         pty.spawn("cmd.exe", cmdline=None, cwd=(BUILD_CWD if is_build else str(home)), env=env_block)
-        if pane == "build":
-            if build_watch_enabled():
-                prompt = (
-                    "Resume the lab-bus watch. Poll the project's bus folder every 5 seconds "
-                    "under BUS-PROTOCOL rules 1-13. Watch LEAD-TO-BUILD.md and GROKBOT-TO-BUILD.md. "
-                    "Reply only in the sender return file."
-                )
-                pty.write("grok --continue \"" + prompt + "\"\r\n")
-        elif is_build:
-            pty.write("grok\r\n")
         PANES[pane] = pty
         print(f"pane open {pane}", flush=True)
 
@@ -238,6 +270,10 @@ async def term_socket(request):
                                 pty.hbc_size = size
                     except Exception:
                         pass
+                    continue
+                if data.startswith("\x00start-grok"):
+                    if pane.startswith("build"):
+                        write_build_grok(pty, pane)
                     continue
                 pty.write(data)
     finally:

@@ -2,7 +2,9 @@
 
 ## Risks / read first
 
-- The Build tab is a full shell. Auto-watch is **off by default**. If you opt in by setting `HBC_BUILD_WATCH=1` and restarting the hub, the first Build session starts an agent with your full environment and watches the project's `bus/` folder (not `~/.grok/handoff`).
+- The Build tab is a full shell. **+ Build session** and the first session open a plain command shell. Starting grok takes a separate **Start grok** click, then a confirm that says it will run an agent with your user permissions. The default answer is **No**.
+- Auto-watch is **off by default**. If you set `HBC_BUILD_WATCH=1` and then confirm **Start grok** on the first session, that session watches the project's `bus/` folder (not `~/.grok/handoff`). The working directory defaults to the project root so `bus/` is visible.
+- Child processes get a short env allowlist only: `GROK_HOME`, `PATH`, and on Windows `SYSTEMROOT`, `WINDIR`, `COMSPEC`, `TEMP`, `TMP`, `USERPROFILE`, `LOCALAPPDATA`, and `APPDATA` when present. API keys are not forwarded. If grok needs `GROK_API_KEY` or `XAI_API_KEY`, set `HBC_PASS_GROK_AUTH=1` before starting the hub; that opt-in is required and is off by default.
 - `tools/Sign-BusJob.ps1 -Verify` always exits 3 on a bad or missing signature. The hub and the Build tab do not enforce signatures on their own in this version, so only use this in a VM or a throwaway test account.
 - The launchers run PowerShell with `-ExecutionPolicy Bypass`.
 
@@ -52,7 +54,7 @@ A living project. It's a work in progress shaped by testers. Setup is in [TESTER
 
 `Open-HiveBrainComms-Shell.cmd` starts the hub if it's down, then opens the app. The app runs through the .NET 8 host (`dotnet Shell.dll`), which also works on PCs where Smart App Control blocks unsigned programs. The hub page is http://127.0.0.1:8107/.
 
-The app has tabs for SuperGrok, Imagine, X, Freebots, Build, and Hub. The Build tab holds up to 8 sessions in an automatic grid. The first session is a shell and does not auto-watch the bus. Extra sessions are added only with the button in that tab. To opt in to auto-watch, set `HBC_BUILD_WATCH=1` in the environment, then start or restart the hub. The watcher then polls `LEAD-TO-BUILD.md` and `GROKBOT-TO-BUILD.md` in the project's `bus/` folder.
+The app has tabs for SuperGrok, Imagine, X, Freebots, Build, and Hub. The Build tab holds up to 8 sessions in an automatic grid. The first session and **+ Build session** open a plain shell. Extra sessions are added only with the button in that tab. **Start grok** on a pane asks first; the default answer is No. To opt in to auto-watch after that confirm, set `HBC_BUILD_WATCH=1` in the environment, then start or restart the hub. The watcher then polls `LEAD-TO-BUILD.md` and `GROKBOT-TO-BUILD.md` in the project's `bus/` folder. Set `HBC_BUILD_CWD` only if you need a different working directory.
 
 ## Bus
 
