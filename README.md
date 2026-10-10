@@ -1,34 +1,71 @@
-# HiveBrainComms
+﻿# HiveBrainComms
+
+**One window to run your AI team.**
 
 **For testers:** see [TESTERS.md](TESTERS.md) for install steps, requirements, and signing in with your own accounts.
 
-HiveBrainComms is a living project. It is a work in progress, and it changes as testers say what helps and what does not.
+## What it is
 
-It is a local command center. Loopback only.
+HiveBrainComms is a free, open-source (MIT) Windows app that brings your AI agents and tools into one window on your own PC. SuperGrok, X, and Imagine sit in tabs that keep your sign-ins, your Grok build terminal runs inside the app (up to 8 sessions side by side), and a routing view shows where each job went and when.
 
-## Hub-first job bus
+## The idea: hub-first routing
 
-The method is the point. Agents are subscription-based. There is no API billing.
+Many multi-agent setups get messy because every agent talks to every other one and work gets lost. Here, every request goes to one hub first. The hub decides who owns it and passes it on. A job that reaches the wrong agent is sent back to the hub instead of being run quietly.
 
-The bus is plain text. You can read every job and every return. Jobs are signed with HMAC. Each job sits in a lane, and the lane says who owns it.
+## How it works
 
-If a job gets skipped, the agent returns it to the router. The router sends it on, or holds it, so work does not vanish.
+- **Plain-text jobs.** Each job is a readable block in a text file that says who sent it, who it's for, when, and what "done" means. You can read every job and every return.
+- **Signed jobs.** Jobs carry an HMAC-SHA256 signature made with a key that only your Windows account can read. The build agent checks it, so a faked or edited job gets flagged.
+- **Routed only.** The build agent is instructed to run only jobs the hub has routed, and it writes back pickup and finish times.
+- **Start All.** One button turns on the hub if it's down, opens the build session, and opens Grok Bot minimized. A second click focuses what's already open instead of opening copies.
 
-Nothing runs without a person. Approve starts a job. Deny is logged the same way.
+## What it does for you
+
+- **Less window chaos.** Your tools and terminals live in one place.
+- **You can see everything.** What was asked, who's on it, and what came back are all in readable files and the routing view.
+- **You stay in control.** The agents follow a rule that nothing is sent, posted, pushed, deleted, or made public without your yes, and lab jobs in the hub need your Approve.
+- **Work doesn't vanish.** Skipped or misrouted jobs get flagged and rerouted instead of dropped.
+- **No API bill.** It runs on the subscriptions you already have (SuperGrok and the Grok CLI), not pay-per-call API keys.
+
+## Security
+
+- The hub listens only on 127.0.0.1, and its API needs a random per-launch token.
+- Signing keys are encrypted with Windows DPAPI and locked to your Windows account. They are never written to the bus, the logs, or git.
+- Each web tab has its own separate profile. The app never injects scripts, reads page content, or types into web tabs. Only you click and type there.
+- Before release it was tested for routing, wrong-owner jobs, spoofed and bad-signature jobs, blocked actions, and leak scans of the repo.
+
+## Who it's for
+
+People running several AI agents or terminals who want them coordinated and easy to watch, without giving up control.
+
+## Status
+
+A living project. It's a work in progress shaped by testers. Setup is in [TESTERS.md](TESTERS.md), and feedback goes in GitHub Issues.
 
 ## Run
 
-`Open-HiveBrainComms-Shell.cmd` starts the hub if it is down, then opens the app. The hub page is http://127.0.0.1:8107/. The app is started with the .NET 8 host.
+`Open-HiveBrainComms-Shell.cmd` starts the hub if it's down, then opens the app. The app runs through the .NET 8 host (`dotnet Shell.dll`), which also works on PCs where Smart App Control blocks unsigned programs. The hub page is http://127.0.0.1:8107/.
 
-The app has the hub page, a Build tab, and a read-only routing view. The Build tab holds up to 8 sessions. The first session is the bus watcher. Extra sessions are added only from the button in that tab. Start All turns the hub on if it is down, and if a Build session is already running it focuses that session instead of opening another.
-
-The page also shows two lab panes, the lab bus, an approvals queue, and a read-only session list.
+The app has tabs for SuperGrok, Imagine, X, Freebots, Build, and Hub. The Build tab holds up to 8 sessions in an automatic grid. The first session is the bus watcher, and extra sessions are added only with the button in that tab.
 
 ## Bus
 
-Jobs are files in `bus/`. Lead writes `LEAD-TO-BUILD.md`. Grok Bot writes `GROKBOT-TO-BUILD.md`. Results go to the matching return file. This is not the live handoff bus.
+The hub's lab bus uses files in `bus/` (this is separate from any live bus you run). Each sender writes its own file, and results go to the matching return file. A job block needs `id`, `from`, `to`, `lane`, `priority`, `time`, `job`, and `done-when`, plus a `routed` line and a `sig` line on a signed bus. The `from` line must match the file owner. A malformed block is refused and not queued. `tools/Sign-BusJob.ps1` signs and verifies jobs.
 
-A block needs `id`, `from`, `to`, `lane`, `priority`, `job`, and `done-when`. `pane` is `1` or `2`. The `from` line must match the file owner. A bad block is refused and not queued.
+## Web panels
+
+SuperGrok, X, Imagine, and Freebots are plain browser views. The app doesn't inject scripts, read page content, or strip framing headers, and the queue and build agent never click or type in those panels.
+
+## Off by default
+
+The app doesn't read, relay, or show Freebots or HiveBrain game chat. The Freebots tab is only a plain view of the site.
+
+## Limits
+
+- Windows only.
+- It needs the Grok CLI, SuperGrok, and the Grok Bot desktop app. Grok Bot can't be embedded, so it opens beside the app, minimized.
+- Some safeguards are rules the agents follow rather than hard locks, such as "routed jobs only" and "no send without a yes". A rule can be missed, but a lock can't.
+- Signature checks are done by the build agent following the bus rules, not by a separate enforcing program.
 
 ## Does the routing help?
 
@@ -38,32 +75,12 @@ Testers: does this routing method help you? Say so in a GitHub Issue. A yes, a n
 
 Open a GitHub Issue. Name the job id if you have one, say what you expected, and say what happened.
 
-## Web panels
-
-SuperGrok, X, and Imagine are plain browser views. The shell does not inject scripts, read page content, or strip framing headers. The queue and Build never click or type in those panels. Only the person does.
-
-## Off by default
-
-Freebots is off. HiveBrain game chat is off. This app does not read, relay, or show either one.
-
-## Limits
-
-- Windows only.
-- It needs the Grok CLI, SuperGrok, and Grok Bot.
-- Some safeguards are rules rather than hard locks. A rule can be missed. A lock cannot.
-
 ## License
 
-MIT. See `LICENSE`.
+MIT. See `LICENSE`. Copyright (c) 2026 AdventureNLearn.
 
 ## Credits
 
-Inspired by GodTerm by Daniel Farina, MIT (github.com/daniel-farina/godterm). No upstream file is copied here. This is not an endorsement.
+HiveBrainComms was built by AdventureNLearn, inspired by GodTerm by Daniel Farina (MIT, github.com/daniel-farina/godterm). No upstream file is copied here, and this is not an endorsement.
 
-Ferdium is the fallback if you do not like this shell. It is not installed.
-
-## Not in this slice
-
-Usage meters and session moves wait for a later slice.
-
-Credits. HiveBrainComms was built by AdventureNLearn, inspired by GodTerm by Daniel Farina (MIT). If you use or build on this hub-first routing method, a small credit line like "Routing method from HiveBrainComms by AdventureNLearn" is appreciated but not required.
+If you use or build on this hub-first routing method, a small credit line like "Routing method from HiveBrainComms by AdventureNLearn" is appreciated but not required.
