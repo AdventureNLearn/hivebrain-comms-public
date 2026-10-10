@@ -205,7 +205,7 @@ public partial class Form1 : Form
             else
             {
                 SelectTab(IndexOf("Build"));
-                Say("Build tab is selected. Sign in there if the resume prompt is waiting.");
+                Say("Build tab is selected. Auto-watch is off unless HBC_BUILD_WATCH is set.");
             }
             FocusOrStartBot();
             Program.Log("start all");
@@ -572,7 +572,7 @@ public partial class Form1 : Form
         var page = new Panel { Dock = DockStyle.Fill, BackColor = Paper, Visible = false };
         var banner = new Label
         {
-            Text = "Build is not watching yet. This tab starts when you select it.",
+            Text = "Build auto-watch is off. This tab is a shell; it does not watch the bus until you opt in.",
             Dock = DockStyle.Top,
             Height = 24,
             ForeColor = Ink,
@@ -595,7 +595,9 @@ public partial class Form1 : Form
             view.Source = new Uri("http://127.0.0.1:8107/build.html?token=" + Uri.EscapeDataString(token));
             view.CoreWebView2.NavigationCompleted += (_, e) =>
             {
-                banner.Text = e.IsSuccess ? "Build tab is connected." : "Build tab failed to load. The hub may be down.";
+                banner.Text = e.IsSuccess
+                    ? "Build tab is connected. Auto-watch stays off unless HBC_BUILD_WATCH is set."
+                    : "Build tab failed to load. The hub may be down.";
                 if (!e.IsSuccess) Say("Build tab failed to load.");
             };
         }
@@ -625,9 +627,9 @@ public partial class Form1 : Form
         page.BringToFront();
         void RefreshRoute()
         {
-            var handoff = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".grok", "handoff");
-            var inbound = Path.Combine(handoff, "GROKBOT-TO-BUILD.md");
-            var returns = Path.Combine(handoff, "BUILD-TO-GROKBOT.md");
+            var busDir = Path.Combine(root, "bus");
+            var inbound = Path.Combine(busDir, "GROKBOT-TO-BUILD.md");
+            var returns = Path.Combine(busDir, "BUILD-TO-GROKBOT.md");
             view.Text = TailOf(inbound, "routed:") + Environment.NewLine + "---- returns ----" + Environment.NewLine + TailOf(returns, "## ");
         }
         RefreshRoute();

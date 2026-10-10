@@ -38,7 +38,7 @@ function applyLayout() {
   grid.style.gridTemplateColumns = `repeat(${c}, 1fr)`;
   grid.style.gridTemplateRows = `repeat(${r}, 1fr)`;
   const fs = panes.length <= 1 ? 14 : panes.length <= 4 ? 13 : 12;
-  note.textContent = `${panes.length} of ${MAX} sessions` + (panes.length === 1 ? " (bus watcher)" : "");
+  note.textContent = `${panes.length} of ${MAX} sessions`;
   panes.forEach(p => {
     if (p.term.options.fontSize !== fs) p.term.options.fontSize = fs;
     fit(p);
@@ -66,8 +66,8 @@ function addPane() {
   note.textContent = "Opened " + id + ".";
   const el = document.createElement("div"); el.className = "pane";
   const head = document.createElement("div"); head.className = "head" + (id === "build" ? " watch" : "");
-  head.innerHTML = `<span>${id === "build" ? "Build (bus watcher)" : "Build " + id.slice(5)}</span>`;
-  const close = document.createElement("button"); close.textContent = "×"; close.title = "Close this pane (the watcher session keeps running)";
+  head.innerHTML = `<span>${id === "build" ? "Build" : "Build " + id.slice(5)}</span>`;
+  const close = document.createElement("button"); close.textContent = "×"; close.title = "Close this pane";
   head.appendChild(close);
   const box = document.createElement("div"); box.className = "term";
   el.append(head, box); grid.appendChild(el);

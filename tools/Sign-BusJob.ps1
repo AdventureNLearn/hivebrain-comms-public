@@ -7,7 +7,6 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $fields = @("id", "from", "to", "lane", "priority", "time", "routed", "job", "done-when")
-$enforceAt = Get-Date "2026-10-11 08:35:00"
 $keyName = @{ GrokBot = "bus-grokbot.bin"; Lead = "bus-lead.bin" }[$Owner]
 $keyPath = Join-Path $env:USERPROFILE ".grok\keys\$keyName"
 if (-not (Test-Path $keyPath)) { throw "signing key is missing" }
@@ -91,11 +90,9 @@ if ($Verify) {
     $given = if ($map.ContainsKey("sig")) { [string]$map["sig"] } else { "" }
     $ok = (Test-SameHex $mac $given) -and $given.Length -gt 0
     if ($ok) { Write-Output "OK $Id"; exit 0 }
-    $warn = (Get-Date) -lt $enforceAt
-    $verdict = if ($warn) { "SPOOFED-WARN" } else { "SPOOFED" }
-    "$(Get-Date -Format o) $verdict $Id" | Add-Content (Join-Path $env:TEMP "bus-sig.log")
-    Write-Output "$verdict $Id"
-    exit $(if ($warn) { 0 } else { 3 })
+    "$(Get-Date -Format o) SPOOFED $Id" | Add-Content (Join-Path $env:TEMP "bus-sig.log")
+    Write-Output "SPOOFED $Id"
+    exit 3
 }
 
 $sigLine = "sig: $mac"
