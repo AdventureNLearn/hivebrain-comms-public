@@ -1,5 +1,7 @@
 # HiveBrainComms
 
+**For testers:** see [TESTERS.md](TESTERS.md) for install steps, requirements, and signing in with your own accounts.
+
 HiveBrainComms is a living project. It is a work in progress, and it changes as testers say what helps and what does not.
 
 It is a local command center. Loopback only.
