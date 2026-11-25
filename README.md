@@ -50,7 +50,7 @@ People running several AI agents or terminals who want them coordinated and easy
 
 ## Status
 
-A living project. It's a work in progress shaped by testers. Setup is in [TESTERS.md](TESTERS.md), and feedback goes in GitHub Issues.
+A living project shaped by tester feedback. Setup is in [TESTERS.md](TESTERS.md), and feedback goes in GitHub Issues.
 
 ## Run
 
